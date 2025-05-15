@@ -10,7 +10,7 @@ BootstrapServer="localhost:29092"
 
 ```sh
 ./kafka/bin/kafka-topics.sh --create \
---bootstrap-server ${BootstrapServer} --replication-factor 1 --partitions 3 --topic "sampletopic"
+--bootstrap-server ${BootstrapServer} --replication-factor 1 --partitions 3 --topic "sampleTopic"
 ```
 
 トピック一覧
@@ -24,15 +24,15 @@ BootstrapServer="localhost:29092"
 トピックへメッセージを送信
 
 ```sh
-./kafka/bin/kafka-console-producer.sh --bootstrap-server ${BootstrapServer} --topic "sampletopic"
+./kafka/bin/kafka-console-producer.sh --bootstrap-server ${BootstrapServer} --topic "sampleTopic"
 ```
 
 メッセージを購読
 
 ```sh
 ./kafka/bin/kafka-console-consumer.sh \
---bootstrap-server ${BootstrapServer} --topic "sampletopic" --group testgroup --from-beginning
+--bootstrap-server ${BootstrapServer} --topic "sampleTopic" --group testgroup --from-beginning
 
 ./kafka/bin/kafka-console-consumer.sh \
---bootstrap-server ${BootstrapServer} --topic "sampletopic" --group testgroup
+--bootstrap-server ${BootstrapServer} --topic "sampleTopic" --group testgroup
 ```

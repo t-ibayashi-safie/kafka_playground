@@ -148,7 +148,7 @@ func RetryConsumer1(ctx context.Context) error {
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
 			"bootstrap.servers": "127.0.0.1:29092",
-			"group.id":          "ManualCommitConsumerGroup",
+			"group.id":          "RetryConsumer1Group",
 			// このグループに対して以前にコミットされたオフセットがない場合、
 			// 割り当てられた各パーティションの最初のメッセージから読み込みを開始する。
 			"auto.offset.reset":               "earliest",
@@ -237,20 +237,24 @@ func RetryConsumer1(ctx context.Context) error {
 	}
 }
 
+// RetryConsumer2 は、メッセージを読み込み、表示します。
+// 処理が失敗した場合、固定回数のリトライを行い、それでもダメな場合は、リトライキューにメッセージを送信します。
+// リトライキューは、別のコンシューマーで非同期に処理します。
+// それでもダメな場合は、デッドレターキューにメッセージを送信します。
 func RetryConsumer2(ctx context.Context) error {
 	ctx2, cancel := context.WithCancel(ctx)
 	go func() {
-		err := retryConsumer2_A(ctx2)
+		err := retryConsumer2_main(ctx2)
 		if err != nil {
-			fmt.Printf("Error in retryConsumer2_A: %v\n", err)
+			fmt.Printf("Error in retryConsumer2_main: %v\n", err)
 			cancel()
 		}
 	}()
 
 	go func() {
-		err := retryConsumer2_B(ctx2)
+		err := retryConsumer2_sub(ctx2)
 		if err != nil {
-			fmt.Printf("Error in retryConsumer2_B: %v\n", err)
+			fmt.Printf("Error in retryConsumer2_sub: %v\n", err)
 			cancel()
 		}
 	}()
@@ -260,17 +264,20 @@ func RetryConsumer2(ctx context.Context) error {
 	return goerr.New("context done")
 }
 
-// RetryConsumer2_A は、メッセージを読み込み、表示します。
+// RetryConsumer2_main は、メッセージを読み込み、表示します。
 // 処理が失敗した場合、固定回数のリトライを行い、それでもダメな場合は、デッドレターキューにメッセージを送信します。
-func retryConsumer2_A(ctx context.Context) error {
+func retryConsumer2_main(ctx context.Context) error {
+
+	mainTopic := "sampleTopic"
+	retryTopic := "retryTopic"
+	// deadLetterTopic := "deadLetterTopic"
+
 	// メッセージを受信するconsumer
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
-			"bootstrap.servers": "127.0.0.1:29092",
-			"group.id":          "ManualCommitConsumerGroup",
-			// このグループに対して以前にコミットされたオフセットがない場合、
-			// 割り当てられた各パーティションの最初のメッセージから読み込みを開始する。
-			"auto.offset.reset":               "earliest",
+			"bootstrap.servers":               "127.0.0.1:29092",
+			"group.id":                        "RetryConsumer2Group",
+			"auto.offset.reset":               "latest",
 			"go.application.rebalance.enable": true, // 再バランシングを有効化
 
 			// コミットされたオフセットを自動的に保存しない
@@ -283,12 +290,11 @@ func retryConsumer2_A(ctx context.Context) error {
 	}
 	defer consumer.Close()
 
-	// デッドレターキューにメッセージを送信するproducer
-	deadLetterTopic := "deadLetterTopic"
+	// リトライーキューにメッセージを送信するproducer
 	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "127.0.0.1:29092"})
 	defer producer.Close()
 
-	err = consumer.SubscribeTopics([]string{"sampleTopic"}, nil)
+	err = consumer.SubscribeTopics([]string{mainTopic}, nil)
 	if err != nil {
 		fmt.Printf("Failed to subscribe to topics: %s\n", err)
 		return goerr.New("failed to subscribe to topics")
@@ -328,16 +334,16 @@ func retryConsumer2_A(ctx context.Context) error {
 				}
 
 				if !success {
-					// 処理に失敗した場合、デッドレターキューにメッセージを送信
-					fmt.Printf("Send message to dead letter topic on %s: %s\n", e.TopicPartition, string(e.Value))
+					// 処理に失敗した場合、リトライキューにメッセージを送信
+					fmt.Printf("Send message to retryTopic on %s: %s\n", e.TopicPartition, string(e.Value))
 					deliveryChan := make(chan kafka.Event)
 					err = producer.Produce(&kafka.Message{
-						TopicPartition: kafka.TopicPartition{Topic: &deadLetterTopic, Partition: kafka.PartitionAny},
+						TopicPartition: kafka.TopicPartition{Topic: &retryTopic, Partition: kafka.PartitionAny},
 						Value:          e.Value,
 					}, deliveryChan)
 
 					if err != nil {
-						fmt.Printf("Failed to send message to dead letter topic: %s\n", err)
+						fmt.Printf("Failed to send message to retryTopic: %s\n", err)
 					} else {
 						ev := <-deliveryChan
 						m := ev.(*kafka.Message)
@@ -380,17 +386,20 @@ func retryConsumer2_A(ctx context.Context) error {
 	}
 }
 
-// RetryConsumer2_B は、デッドレターキューを処理する
-func retryConsumer2_B(ctx context.Context) error {
+// RetryConsumer2_sub は、リトライキューを処理する
+// 失敗した場合は、デッドレターキューにメッセージを送信します。
+func retryConsumer2_sub(ctx context.Context) error {
+	retryTopic := "retryTopic"
 	deadLetterTopic := "deadLetterTopic"
-	// デッドレターキューを処理するconsumer
+
+	// リトライキューを処理するconsumer
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
 			"bootstrap.servers": "127.0.0.1:29092",
 			"group.id":          "ManualCommitConsumerGroup",
 			// このグループに対して以前にコミットされたオフセットがない場合、
 			// 割り当てられた各パーティションの最初のメッセージから読み込みを開始する。
-			"auto.offset.reset":               "earliest",
+			"auto.offset.reset":               "latest",
 			"go.application.rebalance.enable": true, // 再バランシングを有効化
 
 			// コミットされたオフセットを自動的に保存しない
@@ -403,13 +412,20 @@ func retryConsumer2_B(ctx context.Context) error {
 	}
 	defer consumer.Close()
 
-	err = consumer.SubscribeTopics([]string{deadLetterTopic}, nil)
+	// デッドレターキューにメッセージを送信するproducer
+	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "127.0.0.1:29092"})
+	defer producer.Close()
+
+	err = consumer.SubscribeTopics([]string{retryTopic}, nil)
 	if err != nil {
 		fmt.Printf("Failed to subscribe to topics: %s\n", err)
 		return goerr.New("failed to subscribe to topics")
 	}
 
 	processMessage := func(e *kafka.Message) error {
+		if string(e.Value) == "error" {
+			return goerr.New("processing error")
+		}
 		return nil
 	}
 
@@ -439,9 +455,18 @@ func retryConsumer2_B(ctx context.Context) error {
 				}
 
 				if !success {
-					// 処理に失敗した場合
-					// アラートなど上げる
+					// 処理に失敗した場合、デッドレターキューにメッセージを送信
 					fmt.Printf("Failed to process message on %s: %s\n", e.TopicPartition, string(e.Value))
+
+					err := producer.Produce(&kafka.Message{
+						TopicPartition: kafka.TopicPartition{Topic: &deadLetterTopic, Partition: kafka.PartitionAny},
+						Value:          e.Value,
+					}, nil)
+					if err != nil {
+						fmt.Printf("Failed to send message to deadLetterTopic: %s\n", err)
+					} else {
+						fmt.Printf("Send message to deadLetterTopic on %s: %s\n", e.TopicPartition, string(e.Value))
+					}
 				}
 
 				// 手動でオフセットをコミット

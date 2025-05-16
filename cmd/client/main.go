@@ -13,6 +13,7 @@ func main() {
 
 	// err := consumer.SimpleConsumer(ctx)
 	// err := consumer.ManualCommitConsumer(ctx)
+	// err := consumer.RetryConsumer1(ctx)
 	err := consumer.RetryConsumer2(ctx)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)

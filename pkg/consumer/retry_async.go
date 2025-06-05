@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/m-mizutani/goerr"
 )
 
@@ -43,7 +43,6 @@ func retryAsyncConsumer_main(ctx context.Context) error {
 
 	mainTopic := "sampleTopic"
 	retryTopic := "retryTopic"
-	// deadLetterTopic := "deadLetterTopic"
 
 	// メッセージを受信するconsumer
 	consumer, err := kafka.NewConsumer(

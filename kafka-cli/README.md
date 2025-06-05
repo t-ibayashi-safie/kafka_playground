@@ -10,7 +10,7 @@ BootstrapServer="localhost:29092"
 
 ```sh
 ./kafka/bin/kafka-topics.sh --create \
---bootstrap-server ${BootstrapServer} --replication-factor 1 --partitions 3 --topic "deadLetterTopic"
+--bootstrap-server ${BootstrapServer} --replication-factor 1 --partitions 3 --topic "sampleTopic"
 ```
 
 トピック一覧

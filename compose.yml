@@ -94,3 +94,13 @@ services:
       - controller-1
       - controller-2
       - controller-3
+
+  kafka-cli:
+    build:
+      context: .
+      dockerfile: kafka-cli/Dockerfile
+    network_mode: host
+    volumes:
+      - ./kafka-cli:/client:ro  # client-iam.properties の参照元
+    # 既定はヘルプ表示。docker compose run の引数で各 CLI に上書きする。
+    command: ["/opt/kafka/bin/kafka-topics.sh", "--help"]

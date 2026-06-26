@@ -1,10 +1,10 @@
-# kafka playground
 
-kafka を動かす最小構成のプログラムを配置する
-
-
-## クラスタの立ち上げ
 
 ```sh
-docker compose up -d
+# トピック一覧
+sudo docker compose run --rm kafka-cli \
+  /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server $BROKER:9098 \
+  --command-config /client/client-iam.properties \
+  --list
 ```

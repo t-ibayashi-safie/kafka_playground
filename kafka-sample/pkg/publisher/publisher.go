@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/m-mizutani/goerr"
 )
 
-// SimplePublisher は、sampleTopic に固定のメッセージを順に送信します。
+// publishInterval は、メッセージを送信する間隔です。
+const publishInterval = 100 * time.Millisecond
+
+// SimplePublisher は、sampleTopic に連番のメッセージを一定間隔で送信し続けます。
 // 設定値は基本的にデフォルト値を使用します。
 // 配送結果は producer.Events() を購読する goroutine で受け取り、
-// 最後に Flush で未送信メッセージを送り切ってから終了します。
+// ctx がキャンセルされたら Flush で未送信メッセージを送り切ってから終了します。
 func SimplePublisher(ctx context.Context) error {
 	producer, err := kafka.NewProducer(
 		&kafka.ConfigMap{
@@ -45,13 +49,24 @@ func SimplePublisher(ctx context.Context) error {
 		}
 	}()
 
-	messages := []string{"hello", "world", "foo", "bar", "baz"}
-	for _, msg := range messages {
+	ticker := time.NewTicker(publishInterval)
+	defer ticker.Stop()
+
+	cnt := 0
+	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("Context done, exiting...")
+			// 未送信のメッセージを送り切る(最大15秒待機)
+			remaining := producer.Flush(15 * 1000)
+			if remaining > 0 {
+				fmt.Printf("Failed to flush all messages, %d remaining\n", remaining)
+				return goerr.New("failed to flush all messages")
+			}
+			fmt.Println("All messages flushed")
 			return goerr.New("context done")
-		default:
+		case <-ticker.C:
+			msg := fmt.Sprintf("message-%d", cnt)
 			// Produce は非同期。配送結果は上の Events() goroutine が受け取る。
 			err := producer.Produce(
 				&kafka.Message{
@@ -65,16 +80,7 @@ func SimplePublisher(ctx context.Context) error {
 				return goerr.New("failed to produce message")
 			}
 			fmt.Printf("Queued message: %s\n", msg)
+			cnt++
 		}
 	}
-
-	// 未送信のメッセージを送り切る(最大15秒待機)
-	remaining := producer.Flush(15 * 1000)
-	if remaining > 0 {
-		fmt.Printf("Failed to flush all messages, %d remaining\n", remaining)
-		return goerr.New("failed to flush all messages")
-	}
-	fmt.Println("All messages flushed")
-
-	return nil
 }

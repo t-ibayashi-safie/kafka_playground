@@ -11,8 +11,8 @@ RUN go mod download
 COPY . .
 
 # consumer / publisher の両方をビルドする
-RUN CGO_ENABLED=1 go build -o /simple-consumer ./cmd/simple-consumer \
-	&& CGO_ENABLED=1 go build -o /simple-publisher ./cmd/simple-publisher
+RUN CGO_ENABLED=1 go build -o /simple-consumer ./cmd/simple/consumer \
+	&& CGO_ENABLED=1 go build -o /simple-publisher ./cmd/simple/publisher
 
 FROM debian:bookworm-slim
 

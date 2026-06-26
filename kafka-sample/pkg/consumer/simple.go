@@ -14,7 +14,7 @@ import (
 func SimpleConsumer(ctx context.Context) error {
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
-			"bootstrap.servers": "127.0.0.1:29092",
+			"bootstrap.servers": bootstrapServers(),
 			"auto.offset.reset": "earliest",
 			// このグループに対して以前にコミットされたオフセットがない場合、
 			// 割り当てられた各パーティションの最初のメッセージから読み込みを開始する。

@@ -47,7 +47,7 @@ func retryAsyncConsumer_main(ctx context.Context) error {
 	// メッセージを受信するconsumer
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
-			"bootstrap.servers":               "127.0.0.1:29092",
+			"bootstrap.servers":               bootstrapServers(),
 			"group.id":                        "RetryConsumer2Group",
 			"auto.offset.reset":               "latest",
 			"go.application.rebalance.enable": true, // 再バランシングを有効化
@@ -63,7 +63,7 @@ func retryAsyncConsumer_main(ctx context.Context) error {
 	defer consumer.Close()
 
 	// リトライーキューにメッセージを送信するproducer
-	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "127.0.0.1:29092"})
+	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers()})
 	defer producer.Close()
 
 	err = consumer.SubscribeTopics([]string{mainTopic}, nil)
@@ -167,7 +167,7 @@ func retryAsyncConsumer_sub(ctx context.Context) error {
 	// リトライキューを処理するconsumer
 	consumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
-			"bootstrap.servers": "127.0.0.1:29092",
+			"bootstrap.servers": bootstrapServers(),
 			"group.id":          "ManualCommitConsumerGroup",
 			// このグループに対して以前にコミットされたオフセットがない場合、
 			// 割り当てられた各パーティションの最初のメッセージから読み込みを開始する。
@@ -185,7 +185,7 @@ func retryAsyncConsumer_sub(ctx context.Context) error {
 	defer consumer.Close()
 
 	// デッドレターキューにメッセージを送信するproducer
-	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "127.0.0.1:29092"})
+	producer, _ := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers()})
 	defer producer.Close()
 
 	err = consumer.SubscribeTopics([]string{retryTopic}, nil)

@@ -1,4 +1,4 @@
-module github.com/t-ibayashi-safie/kafka_playground
+module github.com/t-ibayashi-safie/kafka_playground/kafka-sample
 
 go 1.24.2
 

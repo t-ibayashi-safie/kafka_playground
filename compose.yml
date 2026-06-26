@@ -95,12 +95,41 @@ services:
       - controller-2
       - controller-3
 
+  simple-consumer:
+    build:
+      context: ./kafka-sample
+      dockerfile: Dockerfile
+    command: ["simple-consumer"]
+    environment:
+      # コンテナ間通信は INTERNAL リスナー(19092)を使う
+      KAFKA_BOOTSTRAP_SERVERS: broker-1:19092,broker-2:19092,broker-3:19092
+    depends_on:
+      - broker-1
+      - broker-2
+      - broker-3
+
+  simple-publisher:
+    build:
+      context: ./kafka-sample
+      dockerfile: Dockerfile
+    command: ["simple-publisher"]
+    environment:
+      # コンテナ間通信は INTERNAL リスナー(19092)を使う
+      KAFKA_BOOTSTRAP_SERVERS: broker-1:19092,broker-2:19092,broker-3:19092
+    depends_on:
+      - broker-1
+      - broker-2
+      - broker-3
+
   kafka-cli:
     build:
       context: .
       dockerfile: kafka-cli/Dockerfile
-    network_mode: host
     volumes:
       - ./kafka-cli:/client:ro  # client-iam.properties の参照元
     # 既定はヘルプ表示。docker compose run の引数で各 CLI に上書きする。
     command: ["/opt/kafka/bin/kafka-topics.sh", "--help"]
+    # depends_on:
+    #   - broker-1
+    #   - broker-2
+    #   - broker-3

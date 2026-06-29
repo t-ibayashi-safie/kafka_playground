@@ -28,7 +28,7 @@ func SimpleConsumer(ctx context.Context) error {
 	}
 	defer consumer.Close()
 
-	err = consumer.SubscribeTopics([]string{"sampleTopic"}, nil)
+	err = consumer.SubscribeTopics([]string{topic()}, nil)
 	if err != nil {
 		fmt.Printf("Failed to subscribe to topics: %s\n", err)
 		return goerr.New("failed to subscribe to topics")

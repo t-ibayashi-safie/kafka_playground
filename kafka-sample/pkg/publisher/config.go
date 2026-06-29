@@ -11,3 +11,13 @@ func bootstrapServers() string {
 	}
 	return "127.0.0.1:29092"
 }
+
+// topic は、送信先のトピックを返します。
+// 環境変数 KAFKA_TOPIC が設定されていればそれを使用し、
+// 未設定の場合はデフォルトの sampleTopic を返します。
+func topic() string {
+	if v := os.Getenv("KAFKA_TOPIC"); v != "" {
+		return v
+	}
+	return "sampleTopic"
+}

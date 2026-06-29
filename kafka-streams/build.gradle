@@ -1,0 +1,23 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.kafka:kafka-streams:3.9.0'
+    // ログ出力(なくても動くが、Streams の内部ログを見たいので追加)
+    implementation 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+application {
+    mainClass = 'com.example.streams.StreamsApp'
+}

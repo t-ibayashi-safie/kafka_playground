@@ -29,7 +29,7 @@ func SimplePublisher(ctx context.Context) error {
 	}
 	defer producer.Close()
 
-	topic := "sampleTopic"
+	targetTopic := topic()
 
 	// 配送結果(delivery report)を非同期に受け取る
 	go func() {
@@ -70,7 +70,7 @@ func SimplePublisher(ctx context.Context) error {
 			// Produce は非同期。配送結果は上の Events() goroutine が受け取る。
 			err := producer.Produce(
 				&kafka.Message{
-					TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+					TopicPartition: kafka.TopicPartition{Topic: &targetTopic, Partition: kafka.PartitionAny},
 					Value:          []byte(msg),
 				},
 				nil,
